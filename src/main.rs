@@ -1,8 +1,8 @@
 use rand::seq::SliceRandom;
+use rayon::prelude::*;
 use reqwest::{blocking, header};
 use serde_json::Value;
 use std::fs;
-use rayon::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let orig = fs::read_to_string("dist/inp.txt")?;
@@ -17,24 +17,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "yi", "yo", "zu",
     ];
 
-    let mut sects: Vec<String> = orig.lines().filter(|x| !x.is_empty()).map(|x| x.to_string()).collect();
-    sects = sects.into_par_iter().map(|x| {
-        let mut cur = x.to_string(); println!("{}", cur);
+    let mut sects: Vec<String> = orig
+        .lines()
+        .filter(|x| !x.is_empty())
+        .map(|x| x.to_string())
+        .collect();
+    sects = sects
+        .into_par_iter()
+        .map(|x| {
+            let mut cur = x.to_string();
+            println!("{}", cur);
 
-        let mut sl = "en";
-        for _ in 0..50 {
-            let tl = langs.choose(&mut rand::thread_rng()).unwrap();
-            cur = make(sl, tl, cur).unwrap();
+            let mut sl = "en";
+            for _ in 0..50 {
+                let tl = langs.choose(&mut rand::thread_rng()).unwrap();
+                cur = make(sl, tl, cur).unwrap();
 
-            println!("{} -> {}: {}", sl, tl, cur);
-            sl = tl;
-        }
+                println!("{} -> {}: {}", sl, tl, cur);
+                sl = tl;
+            }
 
-        cur = make(sl, "en", cur).unwrap();
-        println!("FIN: {}", cur);
-        cur
-    }).collect::<Vec<String>>();
-    
+            cur = make(sl, "en", cur).unwrap();
+            println!("FIN: {}", cur);
+            cur
+        })
+        .collect::<Vec<String>>();
+
     let data = sects.join("\n\n");
     fs::write("dist/out.txt", data)?;
 
@@ -46,9 +54,17 @@ fn make(sl: &str, tl: &str, cur: String) -> Result<String, Box<dyn std::error::E
     let mut headers = header::HeaderMap::new();
     headers.insert(header::USER_AGENT, header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"));
 
-    let res = client.get(format!(
-        "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl={}&tl={}&q={}",
-        sl, tl, cur
-    )).headers(headers).send()?.text()?;
-    Ok(serde_json::from_str::<Value>(&res)?[0][0][0].to_string().replace("\\", "").replace("\"", ""))
+    let res = client
+        .get(format!(
+            "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl={}&tl={}&q={}",
+            sl, tl, cur
+        ))
+        .headers(headers)
+        .send()?
+        .text()?;
+    
+    Ok(serde_json::from_str::<Value>(&res)?[0][0][0]
+        .to_string()
+        .replace("\\", "")
+        .replace("\"", ""))
 }
