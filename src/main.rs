@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let orig = fs::read_to_string("dist/inp.txt")?;
+    let orig = fs::read_to_string("dist/input.txt")?;
     let langs: Vec<&str> = vec![
         "af", "sq", "am", "ar", "hy", "az", "eu", "be", "bn", "bs", "bg", "ca", "ceb", "ny", "zh",
         "zh-TW", "co", "hr", "cs", "da", "nl", "en", "eo", "et", "tl", "fi", "fr", "fy", "gl",
@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|x| !x.is_empty())
         .map(|x| x.to_string())
         .collect();
+
     sects = sects
         .into_par_iter()
         .map(|x| {
@@ -33,13 +34,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let tl = langs.choose(&mut rand::thread_rng()).unwrap();
                 cur = make(sl, tl, cur).unwrap();
 
-                println!("{} -> {}: {}", sl, tl, cur);
                 sl = tl;
             }
-
-            cur = make(sl, "en", cur).unwrap();
-            println!("FIN: {}", cur);
-            cur
+            
+            make(sl, "en", cur).unwrap()
         })
         .collect::<Vec<String>>();
 
@@ -62,9 +60,12 @@ fn make(sl: &str, tl: &str, cur: String) -> Result<String, Box<dyn std::error::E
         .headers(headers)
         .send()?
         .text()?;
-    
-    Ok(serde_json::from_str::<Value>(&res)?[0][0][0]
+
+    let fin = serde_json::from_str::<Value>(&res)?[0][0][0]
         .to_string()
         .replace("\\", "")
-        .replace("\"", ""))
+        .replace("\"", "");
+    println!("{} -> {}: {}", sl, tl, fin);
+
+    Ok(fin)
 }
