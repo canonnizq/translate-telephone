@@ -5,7 +5,6 @@ use serde_json::Value;
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let orig = fs::read_to_string("dist/input.txt")?;
     let langs: Vec<&str> = vec![
         "af", "sq", "am", "ar", "hy", "az", "eu", "be", "bn", "bs", "bg", "ca", "ceb", "ny", "zh",
         "zh-TW", "co", "hr", "cs", "da", "nl", "en", "eo", "et", "tl", "fi", "fr", "fy", "gl",
@@ -17,32 +16,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "yi", "yo", "zu",
     ];
 
-    let mut sects: Vec<String> = orig
-        .lines()
-        .filter(|x| !x.is_empty())
-        .map(|x| x.to_string())
-        .collect();
+    for path in fs::read_dir("res").unwrap() {
+        let path = path.unwrap().path();
+        let orig = fs::read_to_string(&path)?;
 
-    sects = sects
-        .into_par_iter()
-        .map(|x| {
-            let mut cur = x.to_string();
-            println!("{}", cur);
+        let mut sects: Vec<String> = orig
+            .lines()
+            .filter(|x| !x.is_empty())
+            .map(|x| x.to_string())
+            .collect();
 
-            let mut sl = "en";
-            for _ in 0..50 {
-                let tl = langs.choose(&mut rand::thread_rng()).unwrap();
-                cur = make(sl, tl, cur).unwrap();
+        sects = sects
+            .into_par_iter()
+            .map(|x| {
+                let mut cur = x.to_string();
+                println!("{}", cur);
 
-                sl = tl;
-            }
-            
-            make(sl, "en", cur).unwrap()
-        })
-        .collect::<Vec<String>>();
+                let mut sl = "en";
+                for _ in 0..50 {
+                    let tl = langs.choose(&mut rand::thread_rng()).unwrap();
+                    cur = make(sl, tl, cur).unwrap();
 
-    let data = sects.join("\n\n");
-    fs::write("dist/out.txt", data)?;
+                    sl = tl;
+                }
+
+                make(sl, "en", cur).unwrap()
+            })
+            .collect::<Vec<String>>();
+
+        let data = sects.join("\n\n");
+        fs::write(&path, data)?;
+    }
 
     Ok(())
 }
