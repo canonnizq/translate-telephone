@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .into_par_iter()
             .map(|x| {
                 let mut cur = x.to_string();
-                println!("{}", cur);
+                println!("{cur}");
 
                 let mut sl = "en";
                 for _ in 0..50 {
@@ -57,19 +57,19 @@ fn make(sl: &str, tl: &str, cur: String) -> Result<String, Box<dyn std::error::E
     headers.insert(header::USER_AGENT, header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"));
 
     let res = client
-        .get(format!(
-            "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl={}&tl={}&q={}",
-            sl, tl, cur
-        ))
+        .get(format!("https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl={sl}&tl={tl}&q={cur}"))
         .headers(headers)
         .send()?
         .text()?;
 
     let fin = serde_json::from_str::<Value>(&res)?[0][0][0]
-        .to_string()
-        .replace("\\", "")
-        .replace("\"", "");
-    println!("{} -> {}: {}", sl, tl, fin);
+        .as_str()
+        .unwrap()
+        .chars()
+        .filter(|x| !['\\', '"'].contains(x))
+        .collect();
+
+    println!("{sl} -> {tl}: {fin}");
 
     Ok(fin)
 }
